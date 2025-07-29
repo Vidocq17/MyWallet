@@ -26,6 +26,13 @@ export const useTransactionStore = defineStore('transactions', {
     async deleteTransaction(id) {
       await supabase.from('transactions').delete().eq('id', id)
       await this.fetchTransactions()
+    },
+    async updateTransactionAmount(id, newAmount) {
+      const { error } = await supabase
+        .from('transactions')
+        .update({ amount: newAmount })
+        .eq('id', id)
+      if (error) console.error(error)
     }
   }
 })

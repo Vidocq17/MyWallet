@@ -4,21 +4,54 @@
 
 <script setup>
 import { Pie } from 'vue-chartjs'
-import { computed } from 'vue'
-import { useTransactionStore } from '@/stores/transactions'
+import {
+  Chart as ChartJS,
+  Title,
+  Tooltip,
+  Legend,
+  ArcElement
+} from 'chart.js'
+import { computed, toRefs } from 'vue'
 
-const store = useTransactionStore()
+ChartJS.register(Title, Tooltip, Legend, ArcElement)
 
-const chartData = computed(() => {
-  const categoryMap = {}
-  store.items.forEach(tx => {
-    if (tx.type === 'dépense') {
-      categoryMap[tx.category] = (categoryMap[tx.category] || 0) + tx.amount
-    }
-  })
-  return {
-    labels: Object.keys(categoryMap),
-    datasets: [{ data: Object.values(categoryMap) }]
+const props = defineProps({
+  data: {
+    type: Object,
+    required: true
   }
 })
+
+const chartData = computed(() => {
+  const categories = Object.keys(props.data || {})
+  const values = Object.values(props.data || {})
+
+  return {
+    labels: categories,
+    datasets: [
+      {
+        data: values,
+        backgroundColor: [
+          '#f87171',
+          '#fbbf24',
+          '#34d399',
+          '#60a5fa',
+          '#a78bfa',
+          '#f472b6',
+          '#facc15',
+          '#4ade80'
+        ]
+      }
+    ]
+  }
+})
+
+const chartOptions = {
+  responsive: true,
+  plugins: {
+    legend: {
+      position: 'bottom'
+    }
+  }
+}
 </script>
