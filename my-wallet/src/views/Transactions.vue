@@ -17,24 +17,25 @@ defineProps({
 
 <template>
   <div class="bg-white dark:bg-zinc-800 shadow rounded-2xl p-6">
-    <h2 class="text-lg font-semibold mb-4 text-gray-800 dark:text-white">Transactions</h2>
+    <h2 class="text-lg font-semibold mb-4 text-gray-800 dark:text-white text-center">Transactions</h2>
 
     <div v-if="transactions.length" class="space-y-4">
       <div
         v-for="tx in transactions"
         :key="tx.id"
         class="border-b border-gray-200 dark:border-zinc-600 pb-3"
+        :class="tx.type === 'revenu' ? 'text-green-600' : 'text-red-600'"
       >
         <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
-          <div class="flex-1 space-y-1">
+          <div class="flex-1 space-y-1" >
             <div class="flex items-center gap-2">
-              <h3 class="font-semibold text-gray-900 dark:text-white">{{ tx.name }}</h3>
-              <p class="text-sm text-gray-500 italic">{{ tx.description || tx.category }}</p>
+              <h3 class="font-semibold dark:text-white">{{ tx.name }}</h3>
+              <p class="text-sm italic">{{ tx.description || tx.category }}</p>
             </div>
-            <p class="text-sm text-gray-500">
+            <p class="text-sm">
               {{ tx.date }} — {{ tx.category }} — {{ tx.type }}
             </p>
-            <p class="text-xs text-gray-400 italic" v-if="tx.recurrence">
+            <p class="text-xs italic" v-if="tx.recurrence">
               Récurrence : {{ tx.recurrence }}
             </p>
           </div>
@@ -49,7 +50,7 @@ defineProps({
               @change="e => onUpdateAmount(tx, e.target.value)"
               class="w-24 text-right border rounded-md px-2 py-1 text-sm"
             />
-            <span :class="tx.type === 'revenu' ? 'text-green-600' : 'text-red-600'">€</span>
+            <span>€</span>
           </div>
 
           <button
