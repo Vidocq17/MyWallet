@@ -1,6 +1,7 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import { fetchTransactions, addTransaction } from '../services/api'
+
 const categories = ref([
   'Alimentation',
   'Abonnement',
@@ -8,7 +9,7 @@ const categories = ref([
   'Loisirs',
   'Santé',
   'Transport',
-  'Autres',
+  'Autres'
 ])
 
 const transactions = ref([])
@@ -19,9 +20,12 @@ const newTx = ref({
   amount: '',
   type: '',
   category: '',
-  date: new Date().toISOString().slice(0, 10),
+  customCategory: '',
   recurrence: '',
+  date: new Date().toISOString().slice(0, 10)
 })
+
+const emit = defineEmits(['addTransaction'])
 
 const loadTransactions = async () => {
   try {
@@ -34,7 +38,9 @@ const loadTransactions = async () => {
 const handleAddTransaction = async () => {
   const tx = {
     ...newTx.value,
-    category: newTx.value.category === 'Autres' ? newTx.value.customCategory : newTx.value.category,
+    category: newTx.value.category === 'Autres'
+      ? newTx.value.customCategory
+      : newTx.value.category
   }
 
   if (!tx.name || !tx.description || isNaN(tx.amount) || !tx.type || !tx.category || !tx.date) {
@@ -44,15 +50,19 @@ const handleAddTransaction = async () => {
 
   try {
     await addTransaction(tx)
+    emit('addTransaction', tx)
     await loadTransactions()
 
     // Reset form
     newTx.value = {
+      name: '',
       description: '',
       amount: '',
       type: '',
       category: '',
-      date: new Date().toISOString().slice(0, 10),
+      customCategory: '',
+      recurrence: '',
+      date: new Date().toISOString().slice(0, 10)
     }
   } catch (err) {
     console.error('Erreur ajout:', err)
@@ -62,68 +72,83 @@ const handleAddTransaction = async () => {
 </script>
 
 <template>
-  <div class="bg-white shadow rounded-xl p-4 space-y-4">
-        <h2 class="text-lg font-semibold">Ajouter une transaction</h2>
-        <form @submit.prevent="handleAddTransaction" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          
-          <input
-            v-model="newTx.name"
-            type="text"
-            placeholder="Nom"
-            class="border p-2 rounded"
-          />
+  <div class="bg-white dark:bg-zinc-800 shadow rounded-2xl p-6">
+    <h2 class="text-lg font-semibold mb-4 text-gray-800 dark:text-white">Ajouter une transaction</h2>
 
-          <input
-            v-model="newTx.description"
-            type="text"
-            placeholder="Description"
-            class="border p-2 rounded"
-          />
-          
-          <input
-            v-model="newTx.amount"
-            type="number"
-            placeholder="Montant (€)"
-            class="border p-2 rounded"
-          />
-          
-          <select v-model="newTx.type" class="border p-2 rounded">
-            <option disabled value="">Type</option>
-            <option value="revenu">Revenu</option>
-            <option value="dépense">Dépense</option>
-          </select>
-          
-          <select v-model="newTx.category" class="border p-2 rounded">
-            <option disabled value="">Choisir une catégorie</option>
-            <option v-for="cat in categories" :key="cat" :value="cat">
-              {{ cat }}
-            </option>
-            <option value="Autres">Autres</option>
-          </select>
+    <form @submit.prevent="handleAddTransaction" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <input
+        v-model="newTx.name"
+        type="text"
+        placeholder="Nom"
+        class="border border-gray-300 dark:border-zinc-600 bg-white dark:bg-zinc-900 text-sm p-2 rounded-lg shadow-sm"
+      />
 
-          <input
-            v-if="newTx.category === 'Autres'"
-            v-model="newTx.customCategory"
-            type="text"
-            placeholder="Nouvelle catégorie"
-            class="border p-2 rounded"
-          />
+      <input
+        v-model="newTx.description"
+        type="text"
+        placeholder="Description"
+        class="border border-gray-300 dark:border-zinc-600 bg-white dark:bg-zinc-900 text-sm p-2 rounded-lg shadow-sm"
+      />
 
-          <select v-if="newTx.category === 'Abonnement'" v-model="newTx.recurrence" placeholder="Récurrence" class="border p-2 rounded">
-            <option value="">Ponctuelle</option>
-            <option value="mensuelle">Mensuelle</option>
-            <option value="hebdomadaire">Hebdomadaire</option>
-            <option value="annuelle">Annuelle</option>
-          </select>
+      <input
+        v-model="newTx.amount"
+        type="number"
+        step="0.01"
+        min="0"
+        inputmode="decimal"
+        placeholder="Montant (€)"
+        class="border border-gray-300 dark:border-zinc-600 bg-white dark:bg-zinc-900 text-sm p-2 rounded-lg shadow-sm"
+      />
 
-          <input v-model="newTx.date" type="date" class="border p-2 rounded" />
+      <select
+        v-model="newTx.type"
+        class="border border-gray-300 dark:border-zinc-600 bg-white dark:bg-zinc-900 text-sm p-2 rounded-lg shadow-sm"
+      >
+        <option disabled value="">Type</option>
+        <option value="revenu">Revenu</option>
+        <option value="dépense">Dépense</option>
+      </select>
 
-          <button
-            type="submit"
-            class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 sm:col-span-2"
-          >
-            Ajouter
-          </button>
-        </form>
-      </div>
+      <select
+        v-model="newTx.category"
+        class="border border-gray-300 dark:border-zinc-600 bg-white dark:bg-zinc-900 text-sm p-2 rounded-lg shadow-sm"
+      >
+        <option disabled value="">Catégorie</option>
+        <option v-for="cat in categories" :key="cat" :value="cat">{{ cat }}</option>
+        <option value="Autres">Autres</option>
+      </select>
+
+      <input
+        v-if="newTx.category === 'Autres'"
+        v-model="newTx.customCategory"
+        type="text"
+        placeholder="Nouvelle catégorie"
+        class="border border-gray-300 dark:border-zinc-600 bg-white dark:bg-zinc-900 text-sm p-2 rounded-lg shadow-sm"
+      />
+
+      <select
+        v-if="newTx.category === 'Abonnement'"
+        v-model="newTx.recurrence"
+        class="border border-gray-300 dark:border-zinc-600 bg-white dark:bg-zinc-900 text-sm p-2 rounded-lg shadow-sm"
+      >
+        <option value="">Ponctuelle</option>
+        <option value="mensuelle">Mensuelle</option>
+        <option value="hebdomadaire">Hebdomadaire</option>
+        <option value="annuelle">Annuelle</option>
+      </select>
+
+      <input
+        v-model="newTx.date"
+        type="date"
+        class="border border-gray-300 dark:border-zinc-600 bg-white dark:bg-zinc-900 text-sm p-2 rounded-lg shadow-sm"
+      />
+
+      <button
+        type="submit"
+        class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg shadow-sm sm:col-span-2 text-sm"
+      >
+        ➕ Ajouter la transaction
+      </button>
+    </form>
+  </div>
 </template>

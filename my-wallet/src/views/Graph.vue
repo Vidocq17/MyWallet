@@ -11,8 +11,8 @@ defineProps({
 </script>
 
 <template>
-  <div class="bg-white shadow rounded-xl p-4 max-w-2xl mx-auto">
-    <h2 class="text-lg font-medium mb-2">Dépenses par catégorie</h2>
+  <div class="bg-white dark:bg-zinc-800 shadow rounded-2xl p-6 max-w-3xl mx-auto">
+    <h2 class="text-lg font-semibold mb-4 text-gray-800 dark:text-white">Dépenses par catégorie</h2>
     <PieChart
       v-if="Object.keys(data).length"
       :data="data"
