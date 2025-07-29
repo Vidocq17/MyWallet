@@ -1,25 +1,91 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { fetchTransactions, addTransaction} from '../services/api'
-import PieChart from '../components/PieChart.vue'
+import {
+  fetchTransactions,
+  addTransaction,
+  updateTransaction,
+  deleteTransaction
+} from '../services/api'
 import { exportCSV, exportExcel } from '../assets/utils/export'
 
+import Graph from './Graph.vue'
+import Transactions from './Transactions.vue'
+
+const transactions = ref([])
 const selectedMonth = ref(new Date().toISOString().slice(0, 7))
 
-onMounted(async () => {
-  await api.fetchTransactions()
+// 🔄 Initial fetch
+const loadTransactions = async () => {
+  try {
+    transactions.value = await fetchTransactions()
+  } catch (error) {
+    console.error('Erreur fetch:', error)
+  }
+}
+
+onMounted(loadTransactions)
+
+const categories = ref([
+  'Alimentation',
+  'Transport',
+  'Logement',
+  'Loisirs',
+  'Santé',
+  'Autres'
+])
+
+const newTx = ref({
+  description: '',
+  amount: '',
+  type: '',
+  category: '',
+  date: new Date().toISOString().slice(0, 10)
 })
 
+const handleAddTransaction = async () => {
+  const tx = {
+    ...newTx.value,
+    amount: parseFloat(newTx.value.amount)
+  }
+
+  if (!tx.description || isNaN(tx.amount) || !tx.type || !tx.category || !tx.date) {
+    alert('Tous les champs sont obligatoires')
+    return
+  }
+
+  try {
+    await addTransaction(tx)
+    await loadTransactions()
+
+    // Reset form
+    newTx.value = {
+      description: '',
+      amount: '',
+      type: '',
+      category: '',
+      date: new Date().toISOString().slice(0, 10)
+    }
+  } catch (err) {
+    console.error('Erreur ajout:', err)
+    alert('Erreur lors de l’ajout')
+  }
+}
+
+// 📆 Filtrage par mois
 const filteredTransactions = computed(() => {
-  if (!selectedMonth.value) return api.transactions
-  return api.transactions.filter(tx => tx.date.startsWith(selectedMonth.value))
+  return transactions.value.filter(tx =>
+    tx.date?.startsWith(selectedMonth.value)
+  )
 })
 
+// 💰 Solde
 const balance = computed(() => {
-  return filteredTransactions.value.reduce((total, tx) =>
-    total + (tx.type === 'revenu' ? tx.amount : -tx.amount), 0)
-}, 0)
+  return filteredTransactions.value.reduce((total, tx) => {
+    return total + (tx.type === 'revenu' ? tx.amount : -tx.amount)
+  }, 0)
+})
 
+// 📊 Données pour le graphique
 const filteredExpensesByCategory = computed(() => {
   const map = {}
   filteredTransactions.value.forEach(tx => {
@@ -30,28 +96,49 @@ const filteredExpensesByCategory = computed(() => {
   return map
 })
 
-const handleExportCSV = () => {
-  exportCSV(filteredTransactions.value)
-}
-
-const handleExportExcel = () => {
-  exportExcel(filteredTransactions.value)
-}
-
+// 💾 Mise à jour
 const updateAmount = async (tx, newAmount) => {
   const parsed = parseFloat(newAmount)
   if (!isNaN(parsed) && parsed >= 0) {
-    await store.updateTransactionAmount(tx.id, parsed)
-    await store.fetchTransactions()
+    await updateTransaction(tx.id, { amount: parsed })
+    await loadTransactions()
   }
 }
+
+// 📤 Export
+const handleExportCSV = () => exportCSV(filteredTransactions.value)
+const handleExportExcel = () => exportExcel(filteredTransactions.value)
 </script>
 
 <template>
   <div class="p-4 space-y-6 max-w-5xl mx-auto">
     <h1 class="text-3xl font-bold text-center">Tableau de bord</h1>
 
-    <!-- Filtres et actions -->
+    <!-- Formulaire -->
+    <div class="bg-white shadow rounded-xl p-4 space-y-4">
+      <h2 class="text-lg font-semibold">Ajouter une transaction</h2>
+      <form @submit.prevent="handleAddTransaction" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <input v-model="newTx.description" type="text" placeholder="Description" class="border p-2 rounded" />
+        <input v-model="newTx.amount" type="number" placeholder="Montant (€)" class="border p-2 rounded" />
+        <select v-model="newTx.type" class="border p-2 rounded">
+          <option disabled value="">Type</option>
+          <option value="revenu">Revenu</option>
+          <option value="dépense">Dépense</option>
+        </select>
+        <select v-model="newTx.category" class="border p-2 rounded">
+          <option disabled value="">Choisir une catégorie</option>
+          <option v-for="cat in categories" :key="cat" :value="cat">
+            {{ cat }}
+          </option>
+        </select>
+        <input v-model="newTx.date" type="date" class="border p-2 rounded" />
+        <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 sm:col-span-2">
+          Ajouter
+        </button>
+      </form>
+    </div>
+
+    <!-- Filtres -->
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
       <input
         type="month"
@@ -61,13 +148,13 @@ const updateAmount = async (tx, newAmount) => {
       <div class="flex gap-2">
         <button
           @click="handleExportCSV"
-          class="flex items-center gap-2 bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+          class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
         >
           Export CSV
         </button>
         <button
           @click="handleExportExcel"
-          class="flex items-center gap-2 bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
+          class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
         >
           Export Excel
         </button>
@@ -83,44 +170,13 @@ const updateAmount = async (tx, newAmount) => {
     </div>
 
     <!-- Graphique -->
-    <div class="bg-white shadow rounded-xl p-4 max-w-2xl mx-auto">
-      <h2 class="text-lg font-medium mb-2">Dépenses par catégorie</h2>
-      <PieChart
-        v-if="Object.keys(filteredExpensesByCategory).length"
-        :data="filteredExpensesByCategory"
-      />
-      <p v-else class="text-sm text-gray-500 text-center">Aucune donnée disponible ce mois-ci.</p>
-    </div>
+    <Graph :data="filteredExpensesByCategory" />
 
     <!-- Transactions -->
-    <div class="bg-white shadow rounded-xl p-4">
-      <h2 class="text-lg font-semibold mb-4">Transactions</h2>
-      <div v-if="filteredTransactions.length" class="space-y-4">
-        <div
-          v-for="tx in filteredTransactions"
-          :key="tx.id"
-          class="flex flex-col sm:flex-row sm:items-center justify-between border-b pb-3 gap-2"
-        >
-          <div class="flex-1">
-            <p class="font-medium">{{ tx.description || tx.category }}</p>
-            <p class="text-sm text-gray-500">
-              {{ tx.date }} — {{ tx.category }} — {{ tx.type }}
-            </p>
-          </div>
-          <div class="flex items-center gap-2">
-            <input
-              type="number"
-              :value="tx.amount"
-              @change="e => updateAmount(tx, e.target.value)"
-              class="w-24 text-right border rounded p-1"
-            />
-            <span :class="tx.type === 'revenu' ? 'text-green-600' : 'text-red-600'">
-              €</span>
-          </div>
-        </div>
-      </div>
-      <p v-else class="text-sm text-gray-500 text-center">Aucune transaction pour ce mois.</p>
-    </div>
+    <Transactions
+      :transactions="filteredTransactions"
+      :onUpdateAmount="updateAmount"
+    />
   </div>
 </template>
 
