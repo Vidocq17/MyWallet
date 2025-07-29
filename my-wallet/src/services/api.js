@@ -30,6 +30,7 @@ export const deleteTransaction = async (id) => {
     .from('transactions')
     .delete()
     .eq('id', id)
+    fetchTransactions()
   if (error) throw error
   return data
 }

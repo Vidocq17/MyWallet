@@ -1,11 +1,6 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import {
-  fetchTransactions,
-  addTransaction,
-  updateTransaction,
-  deleteTransaction
-} from '../services/api'
+import { fetchTransactions, addTransaction, updateTransaction, deleteTransaction } from '../services/api'
 import { exportCSV, exportExcel } from '../assets/utils/export'
 
 import Graph from './Graph.vue'
@@ -14,7 +9,6 @@ import Transactions from './Transactions.vue'
 const transactions = ref([])
 const selectedMonth = ref(new Date().toISOString().slice(0, 7))
 
-// 🔄 Initial fetch
 const loadTransactions = async () => {
   try {
     transactions.value = await fetchTransactions()
@@ -27,10 +21,11 @@ onMounted(loadTransactions)
 
 const categories = ref([
   'Alimentation',
-  'Transport',
+  'Abonnement',
   'Logement',
   'Loisirs',
   'Santé',
+  'Transport',
   'Autres'
 ])
 
@@ -71,21 +66,18 @@ const handleAddTransaction = async () => {
   }
 }
 
-// 📆 Filtrage par mois
 const filteredTransactions = computed(() => {
   return transactions.value.filter(tx =>
     tx.date?.startsWith(selectedMonth.value)
   )
 })
 
-// 💰 Solde
 const balance = computed(() => {
   return filteredTransactions.value.reduce((total, tx) => {
     return total + (tx.type === 'revenu' ? tx.amount : -tx.amount)
   }, 0)
 })
 
-// 📊 Données pour le graphique
 const filteredExpensesByCategory = computed(() => {
   const map = {}
   filteredTransactions.value.forEach(tx => {
@@ -96,7 +88,6 @@ const filteredExpensesByCategory = computed(() => {
   return map
 })
 
-// 💾 Mise à jour
 const updateAmount = async (tx, newAmount) => {
   const parsed = parseFloat(newAmount)
   if (!isNaN(parsed) && parsed >= 0) {
@@ -105,7 +96,15 @@ const updateAmount = async (tx, newAmount) => {
   }
 }
 
-// 📤 Export
+const handleDeleteTransaction = async (id) => {
+  try {
+    await deleteTransaction(id)
+    await loadTransactions()
+  } catch (error) {
+    console.error('Erreur de suppression:', error)
+  }
+}
+
 const handleExportCSV = () => exportCSV(filteredTransactions.value)
 const handleExportExcel = () => exportExcel(filteredTransactions.value)
 </script>
@@ -176,6 +175,7 @@ const handleExportExcel = () => exportExcel(filteredTransactions.value)
     <Transactions
       :transactions="filteredTransactions"
       :onUpdateAmount="updateAmount"
+      :on-delete="handleDeleteTransaction"
     />
   </div>
 </template>
