@@ -6,7 +6,7 @@ import { useToast } from 'vue-toastification'
 
 import Graph from './Graph.vue'
 import Transactions from './Transactions.vue'
-import Add from '@/components/Modal/Add.vue'
+import Add from '@/components/Form.vue'
 
 const transactions = ref([])
 const selectedMonth = ref(new Date().toISOString().slice(0, 7))
@@ -18,7 +18,7 @@ const autoGenerateRecurring = async () => {
   const rec = all.filter(tx =>
     tx.recurrence === 'mensuelle' &&
     !all.some(t =>
-      t.description === tx.description &&
+      t.name === tx.name &&
       t.date.startsWith(now)
     )
   )
@@ -67,7 +67,7 @@ const updateAmount = async (tx, newAmount) => {
   if (!isNaN(parsed) && parsed >= 0) {
     await updateTransaction(tx.id, { amount: parsed })
     await loadTransactions()
-    toast.add({ severity: 'success', summary: 'Montant mis à jour', detail: `Le montant de la transaction "${tx.description}" a été mis à jour.`, life: 3000 })
+    toast.add({ severity: 'success', summary: 'Montant mis à jour', detail: `Le montant de la transaction "${tx.name}" a été mis à jour.`, life: 3000 })
   }
 }
 

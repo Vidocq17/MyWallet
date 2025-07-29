@@ -23,10 +23,12 @@ defineProps({
       <div
         v-for="tx in transactions"
         :key="tx.id"
-        class="flex flex-col sm:flex-row sm:items-center justify-between border-b pb-3 gap-2"
+        class="flex flex-col sm:flex-row items-center justify-between border-b pb-3 gap-2 p-2"
       >
         <div class="flex-1">
-          <p class="font-medium">{{ tx.description || tx.category }}</p>
+          <div class="flex">
+            <h3 class="font-semibold">{{ tx.name }}</h3> - <p class="font-medium italic">{{ tx.description || tx.category }}</p>
+          </div>
           <p class="text-sm text-gray-500">
             {{ tx.date }} — {{ tx.category }} — {{ tx.type }}
           </p>
