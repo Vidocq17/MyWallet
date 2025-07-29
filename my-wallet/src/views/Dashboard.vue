@@ -2,12 +2,33 @@
 import { ref, computed, onMounted } from 'vue'
 import { fetchTransactions, addTransaction, updateTransaction, deleteTransaction } from '../services/api'
 import { exportCSV, exportExcel } from '../assets/utils/export'
+import { useToast } from 'vue-toastification'
 
 import Graph from './Graph.vue'
 import Transactions from './Transactions.vue'
+import Add from '@/components/Modal/Add.vue'
 
 const transactions = ref([])
 const selectedMonth = ref(new Date().toISOString().slice(0, 7))
+const toast = useToast()
+
+const autoGenerateRecurring = async () => {
+  const now = new Date().toISOString().slice(0, 7)
+  const all = await fetchTransactions()
+  const rec = all.filter(tx =>
+    tx.recurrence === 'mensuelle' &&
+    !all.some(t =>
+      t.description === tx.description &&
+      t.date.startsWith(now)
+    )
+  )
+  for (const tx of rec) {
+    const copy = { ...tx, date: new Date().toISOString().slice(0, 10) }
+    delete copy.id
+    await addTransaction(copy)
+  }
+}
+
 
 const loadTransactions = async () => {
   try {
@@ -18,53 +39,6 @@ const loadTransactions = async () => {
 }
 
 onMounted(loadTransactions)
-
-const categories = ref([
-  'Alimentation',
-  'Abonnement',
-  'Logement',
-  'Loisirs',
-  'Santé',
-  'Transport',
-  'Autres'
-])
-
-const newTx = ref({
-  description: '',
-  amount: '',
-  type: '',
-  category: '',
-  date: new Date().toISOString().slice(0, 10)
-})
-
-const handleAddTransaction = async () => {
-  const tx = {
-    ...newTx.value,
-    amount: parseFloat(newTx.value.amount)
-  }
-
-  if (!tx.description || isNaN(tx.amount) || !tx.type || !tx.category || !tx.date) {
-    alert('Tous les champs sont obligatoires')
-    return
-  }
-
-  try {
-    await addTransaction(tx)
-    await loadTransactions()
-
-    // Reset form
-    newTx.value = {
-      description: '',
-      amount: '',
-      type: '',
-      category: '',
-      date: new Date().toISOString().slice(0, 10)
-    }
-  } catch (err) {
-    console.error('Erreur ajout:', err)
-    alert('Erreur lors de l’ajout')
-  }
-}
 
 const filteredTransactions = computed(() => {
   return transactions.value.filter(tx =>
@@ -93,6 +67,7 @@ const updateAmount = async (tx, newAmount) => {
   if (!isNaN(parsed) && parsed >= 0) {
     await updateTransaction(tx.id, { amount: parsed })
     await loadTransactions()
+    toast.add({ severity: 'success', summary: 'Montant mis à jour', detail: `Le montant de la transaction "${tx.description}" a été mis à jour.`, life: 3000 })
   }
 }
 
@@ -100,8 +75,10 @@ const handleDeleteTransaction = async (id) => {
   try {
     await deleteTransaction(id)
     await loadTransactions()
+    toast.add({ severity: 'success', summary: 'Transaction supprimée', detail: 'La transaction a été supprimée avec succès.', life: 3000 })
   } catch (error) {
     console.error('Erreur de suppression:', error)
+    toast.add({ severity: 'error', summary: 'Erreur', detail: 'Une erreur est survenue lors de la suppression de la transaction.', life: 3000 })
   }
 }
 
@@ -114,28 +91,7 @@ const handleExportExcel = () => exportExcel(filteredTransactions.value)
     <h1 class="text-3xl font-bold text-center">Tableau de bord</h1>
 
     <!-- Formulaire -->
-    <div class="bg-white shadow rounded-xl p-4 space-y-4">
-      <h2 class="text-lg font-semibold">Ajouter une transaction</h2>
-      <form @submit.prevent="handleAddTransaction" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <input v-model="newTx.description" type="text" placeholder="Description" class="border p-2 rounded" />
-        <input v-model="newTx.amount" type="number" placeholder="Montant (€)" class="border p-2 rounded" />
-        <select v-model="newTx.type" class="border p-2 rounded">
-          <option disabled value="">Type</option>
-          <option value="revenu">Revenu</option>
-          <option value="dépense">Dépense</option>
-        </select>
-        <select v-model="newTx.category" class="border p-2 rounded">
-          <option disabled value="">Choisir une catégorie</option>
-          <option v-for="cat in categories" :key="cat" :value="cat">
-            {{ cat }}
-          </option>
-        </select>
-        <input v-model="newTx.date" type="date" class="border p-2 rounded" />
-        <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 sm:col-span-2">
-          Ajouter
-        </button>
-      </form>
-    </div>
+    <Add @addTransaction="handleAddTransaction" />
 
     <!-- Filtres -->
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">

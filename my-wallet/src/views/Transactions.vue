@@ -30,6 +30,9 @@ defineProps({
           <p class="text-sm text-gray-500">
             {{ tx.date }} — {{ tx.category }} — {{ tx.type }}
           </p>
+          <p class="text-sm text-gray-500 italic" v-if="tx.recurrence">
+            Récurrence : {{ tx.recurrence }}
+          </p>
         </div>
 
         <div class="flex items-center gap-2">
@@ -44,12 +47,14 @@ defineProps({
           />
           <span :class="tx.type === 'revenu' ? 'text-green-600' : 'text-red-600'">€</span>
         </div>
+
         <button
           @click="onDelete(tx.id)"
           class="text-red-600 hover:text-red-800 cursor-pointer"
         >
           Supprimer
         </button>
+
       </div>
     </div>
 
