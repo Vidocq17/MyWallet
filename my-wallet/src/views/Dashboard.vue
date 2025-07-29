@@ -1,19 +1,18 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { useTransactionStore } from '../stores/transactions'
+import { fetchTransactions, addTransaction} from '../services/api'
 import PieChart from '../components/PieChart.vue'
 import { exportCSV, exportExcel } from '../assets/utils/export'
 
-const store = useTransactionStore()
 const selectedMonth = ref(new Date().toISOString().slice(0, 7))
 
-onMounted(() => {
-  store.fetchTransactions()
+onMounted(async () => {
+  await api.fetchTransactions()
 })
 
 const filteredTransactions = computed(() => {
-  if (!selectedMonth.value) return store.items
-  return store.items.filter(tx => tx.date.startsWith(selectedMonth.value))
+  if (!selectedMonth.value) return api.transactions
+  return api.transactions.filter(tx => tx.date.startsWith(selectedMonth.value))
 })
 
 const balance = computed(() => {
