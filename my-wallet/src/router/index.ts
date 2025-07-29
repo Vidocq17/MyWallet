@@ -2,7 +2,8 @@ import { createRouter, createWebHistory } from 'vue-router'
 import App from '@/App.vue'
 
 const routes = [
-  { path: '/', name: 'home', component: App },
+  { path: '/', redirect: '/app' },
+  { path: '/app', name: 'about', component: App }
 ]
 
 const router = createRouter({
