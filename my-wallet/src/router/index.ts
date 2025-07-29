@@ -1,9 +1,9 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import App from '@/App.vue'
+import Dashboard from '@/views/Dashboard.vue'
 
 const routes = [
   { path: '/', redirect: '/app' },
-  { path: '/app', name: 'about', component: App }
+  { path: '/app', name: 'dashboard', component: Dashboard },
 ]
 
 const router = createRouter({
